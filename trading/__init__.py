@@ -1,1 +1,3 @@
-
+"""
+Trading analysis module
+"""

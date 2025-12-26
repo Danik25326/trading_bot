@@ -1,67 +1,69 @@
 import os
 import logging
-from telegram import Bot
+from telegram import Update
 from telegram.ext import Application, CommandHandler, ContextTypes
 
-# Налаштування логування
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+# Отримуємо токен з змінних середовища
+TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 
-class TelegramBot:
-    def __init__(self):
-        self.token = os.getenv("TELEGRAM_BOT_TOKEN")
-        if not self.token:
-            raise ValueError("TELEGRAM_BOT_TOKEN не встановлено в .env файлі")
-        self.bot = Bot(token=self.token)
-        self.application = Application.builder().token(self.token).build()
-        
-    async def start_command(self, update, context: ContextTypes.DEFAULT_TYPE):
-        """Обробник команди /start"""
-        user = update.effective_user
-        await update.message.reply_text(
-            f"Привіт, {user.first_name}!\n"
-            f"Я бот для торгових сигналів Pocket Option.\n"
-            f"Сигнали генеруються кожні 5 хвилин з ймовірністю >70%."
+async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Обробник команди /start"""
+    await update.message.reply_text(
+        "🤖 Бот для сигналів Pocket Option активований!\n"
+        "Я буду надсилати сигнали кожні 5 хвилин з вірогідністю >70%."
+    )
+
+async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Обробник команди /help"""
+    await update.message.reply_text(
+        "📈 Команди:\n"
+        "/start - Запустити бота\n"
+        "/help - Допомога\n"
+        "/status - Статус бота\n"
+        "/test - Тестовий сигнал"
+    )
+
+async def send_signal_message(chat_id: int, message: str, application: Application):
+    """Надсилає повідомлення з сигналом"""
+    try:
+        await application.bot.send_message(
+            chat_id=chat_id,
+            text=message,
+            parse_mode="Markdown"
         )
-    
-    async def help_command(self, update, context: ContextTypes.DEFAULT_TYPE):
-        """Обробник команди /help"""
-        help_text = """
-Доступні команди:
-/start - Початок роботи
-/help - Це повідомлення
-/status - Статус бота
-/signals - Останні сигнали (якщо є)
-        """
-        await update.message.reply_text(help_text)
-    
-    async def status_command(self, update, context: ContextTypes.DEFAULT_TYPE):
-        """Обробник команди /status"""
-        # Тут можна додати перевірку статусу з'єднань
-        await update.message.reply_text("Бот активний. Очікуйте сигнали!")
-    
-    def setup_handlers(self):
-        """Налаштування обробників команд"""
-        self.application.add_handler(CommandHandler("start", self.start_command))
-        self.application.add_handler(CommandHandler("help", self.help_command))
-        self.application.add_handler(CommandHandler("status", self.status_command))
-        # Додайте інші команди за потреби
-    
-    async def send_message(self, chat_id: int, text: str):
-        """Надіслати повідомлення в конкретний чат"""
-        try:
-            await self.bot.send_message(chat_id=chat_id, text=text, parse_mode='Markdown')
-        except Exception as e:
-            logger.error(f"Помилка відправки повідомлення: {e}")
-    
-    async def run(self):
-        """Запуск бота"""
-        self.setup_handlers()
-        await self.application.initialize()
-        await self.application.start()
-        await self.application.updater.start_polling()
-        logger.info("Telegram бот запущений")
+    except Exception as e:
+        logging.error(f"Помилка відправки повідомлення: {e}")
 
-    async def stop(self):
-        """Зупинка бота"""
-        await self.application.stop()
+# 👇 ОСНОВНА ФУНКЦІЯ, ЯКУ ІМПОРТУЄ main.py
+async def start_bot():
+    """Запускає Telegram бота"""
+    if not TOKEN:
+        logging.error("❌ Не знайдено TELEGRAM_BOT_TOKEN")
+        return
+    
+    logging.info("🚀 Запуск Telegram бота...")
+    
+    # Створюємо додаток
+    application = Application.builder().token(TOKEN).build()
+    
+    # Додаємо обробники команд
+    application.add_handler(CommandHandler("start", start_command))
+    application.add_handler(CommandHandler("help", help_command))
+    
+    # Ініціалізуємо та запускаємо
+    await application.initialize()
+    await application.start()
+    await application.updater.start_polling()
+    
+    logging.info("✅ Бот запущено та очікує повідомлень...")
+    
+    # Тримаємо бота активним
+    await asyncio.Event().wait()
+
+# Альтернативна назва функції (якщо ви використовували іншу)
+async def main():
+    """Альтернативна назва для запуску"""
+    await start_bot()
+
+# Експортуємо функції
+__all__ = ['start_bot', 'send_signal_message']

@@ -1,9 +1,9 @@
 services:
-  - type: web  # Залишаємо 'web' для постійної роботи
+  - type: worker  # Змініть з 'web' на 'worker' для простого скрипта
     name: trading-signal-bot
     env: python
     buildCommand: pip install -r requirements.txt
-    startCommand: python main.py  # НЕ gunicorn!
+    startCommand: python main.py
     envVars:
       - key: TELEGRAM_BOT_TOKEN
         sync: false
@@ -15,7 +15,4 @@ services:
         value: "5"
       - key: MIN_CONFIDENCE_THRESHOLD
         value: "0.70"
-    plan: free  # Для початку
-    # Додаємо health check щоб Render не гасив сервіс
-    healthCheckPath: /health
-    autoDeploy: true
+    plan: free

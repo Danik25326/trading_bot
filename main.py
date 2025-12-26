@@ -1,29 +1,43 @@
 import asyncio
 import logging
+from aiohttp import web
 from dotenv import load_dotenv
-from bot.telegram_bot import TelegramBot
-from scheduler import start_scheduler
 
-load_dotenv()
+# Додаємо HTTP сервер для Render health checks
+async def health_check(request):
+    return web.Response(text="Bot is alive")
 
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-
-async def main():
-    """Головна асинхронна функція для запуску бота та планувальника."""
-    # Ініціалізація бота
-    bot = TelegramBot()
+async def start_background_tasks(app):
+    """Запускаємо бота і планувальник у фоновому режимі"""
+    from bot.telegram_bot import start_bot
+    from scheduler import start_scheduler
     
-    # Запускаємо Telegram-бота в одному потоці
-    bot_task = asyncio.create_task(bot.run())
-    # Запускаємо планувальник перевірки сигналів в іншому
-    scheduler_task = asyncio.create_task(start_scheduler(bot))  # Передаємо бота в планувальник
+    # Запускаємо в окремих задачах
+    app['bot_task'] = asyncio.create_task(start_bot())
+    app['scheduler_task'] = asyncio.create_task(start_scheduler())
+    logging.info("Фонові задачі запущено")
+
+async def cleanup_background_tasks(app):
+    """Коректне закриття при виході"""
+    app['bot_task'].cancel()
+    app['scheduler_task'].cancel()
+    await asyncio.gather(app['bot_task'], app['scheduler_task'], return_exceptions=True)
+
+async def main_app():
+    """Головний додаток з HTTP сервером"""
+    load_dotenv()
     
-    # Чекаємо завершення обох задач
-    await asyncio.gather(bot_task, scheduler_task)
+    app = web.Application()
+    app.router.add_get('/health', health_check)
+    app.router.add_get('/', health_check)  # Кореневий шлях теж
+    
+    # Додаємо фонові задачі
+    app.on_startup.append(start_background_tasks)
+    app.on_cleanup.append(cleanup_background_tasks)
+    
+    return app
 
 if __name__ == "__main__":
-    try:
-        asyncio.run(main())
-    except KeyboardInterrupt:
-        print("Бот зупинено")
+    # Це потрібно для Render
+    logging.basicConfig(level=logging.INFO)
+    web.run_app(main_app(), port=10000)  # Render сам призначає порт

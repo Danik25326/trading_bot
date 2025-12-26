@@ -1,0 +1,7 @@
+pocketoptionapi-async==2.0.1  # Основа для роботи з Pocket Option
+groq==0.9.0                   # Клієнт для GROQ API
+python-telegram-bot==20.7     # Сучасна бібліотека для Telegram Bot API
+pandas>=2.0.0                 # Для роботи з табличними даними (котировками)
+python-dotenv>=1.0.0          # Для завантаження змінних з .env файлу
+apscheduler>=3.10.0           # Для планування задач (перевірки кожні 5 хв)
+aiohttp>=3.9.0                # Асинхронні HTTP-запити (потрібно для клієнтів)

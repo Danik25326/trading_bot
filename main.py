@@ -4,33 +4,49 @@ import asyncio
 import logging
 from dotenv import load_dotenv
 
-# Додаємо поточну директорію до шляху Python
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+# КРИТИЧНО: Додаємо поточну директорію до Python path
+current_dir = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, current_dir)
+
+# Тепер імпортуємо модулі ВСЕРЕДИНИ функції
+load_dotenv()
+logging.basicConfig(level=logging.INFO)
 
 async def main():
-    """Спрощена версія без HTTP сервера"""
-    load_dotenv()
-    logging.basicConfig(level=logging.INFO)
+    logging.info("=== START BOT ===")
+    logging.info(f"Current directory: {current_dir}")
+    logging.info(f"Python path: {sys.path}")
     
-    # Імпортуємо тут, після налаштування шляхів
+    # Перевірка наявності папок
+    bot_dir = os.path.join(current_dir, 'bot')
+    trading_dir = os.path.join(current_dir, 'trading')
+    
+    logging.info(f"Bot dir exists: {os.path.exists(bot_dir)}")
+    logging.info(f"Trading dir exists: {os.path.exists(trading_dir)}")
+    
+    if os.path.exists(bot_dir):
+        logging.info(f"Files in bot/: {os.listdir(bot_dir)}")
+    
+    # Імпорт ВСЕРЕДИНИ функції після додавання шляху
     try:
+        # Відносний імпорт
         from bot.telegram_bot import start_bot
         from scheduler import start_scheduler
         
-        logging.info("Запуск бота...")
+        logging.info("✅ All modules imported successfully")
         
-        # Запускаємо обидва компоненти
+        # Запускаємо бота та планувальник
         bot_task = asyncio.create_task(start_bot())
         scheduler_task = asyncio.create_task(start_scheduler())
         
-        # Чекаємо на обидві задачі
         await asyncio.gather(bot_task, scheduler_task)
         
     except ImportError as e:
-        logging.error(f"Помилка імпорту: {e}")
-        logging.error("Перевірте структуру файлів та __init__.py")
+        logging.error(f"❌ Import error: {e}")
+        # Детальна інформація
+        import traceback
+        logging.error(traceback.format_exc())
         raise
 
 if __name__ == "__main__":
-    # Для Render - просто запускаємо asyncio
     asyncio.run(main())

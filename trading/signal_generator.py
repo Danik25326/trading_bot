@@ -3,13 +3,13 @@ import asyncio
 from datetime import datetime
 from trading.pocket_client import PocketOptionClient
 from trading.analyzer import MarketAnalyzer
-from bot.telegram_bot import send_signal
 import logging
 
 class SignalGenerator:
     """Генератор сигналів з фільтрацією >70%"""
     
-    def __init__(self):
+    def __init__(self, bot):
+        self.bot = bot  # Екземпляр TelegramBot
         self.pocket_client = PocketOptionClient()
         self.analyzer = MarketAnalyzer()
         self.min_confidence = float(os.getenv("MIN_CONFIDENCE_THRESHOLD", 0.70))
@@ -54,7 +54,15 @@ class SignalGenerator:
                     )
                     
                     # 4. Надсилаємо в Telegram
-                    await send_signal(message)
+                    # Припустимо, що ви хочете надсилати собі (chat_id можна зберігати в .env)
+                    chat_id = os.getenv("TELEGRAM_CHAT_ID")
+                    if chat_id:
+                        await self.bot.send_message(chat_id=int(chat_id), text=message)
+                    else:
+                        # Якщо chat_id не вказано, надішлемо всім, хто запустив бота (нерекомендовано)
+                        # Краще зберігати chat_id при команді /start
+                        pass
+                    
                     logging.info(f"Надіслано сигнал: {asset}")
                     
             except Exception as e:

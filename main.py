@@ -3,6 +3,7 @@ import sys
 import asyncio
 import logging
 from dotenv import load_dotenv
+from telegram_bot import start_bot
 
 # КРИТИЧНО: Додаємо поточну директорію до Python path
 current_dir = os.path.dirname(os.path.abspath(__file__))
